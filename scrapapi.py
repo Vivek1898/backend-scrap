@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 import time
 from concurrent.futures import ThreadPoolExecutor
 from flask_cors import CORS, cross_origin
-
+import re
 import logging
 app = Flask(__name__)
 CORS(app)
@@ -108,17 +108,17 @@ def getOgPrefixMetaTags(response, data):
 
     # Parse the HTML content using BeautifulSoup
     soup = BeautifulSoup(html_content, 'html.parser')
-    app.logger.info(soup)
+    # app.logger.info(soup)
     # json = soup.find('script', type='application/ld+json')
     # Extract meta tags from the parsed HTML
     meta_tags = soup.find_all('meta')
-    app.logger.info("Called")
+    # app.logger.info("Called")
     for meta_tag in meta_tags:
         for attr_value in meta_tag.attrs.values():
             if isinstance(attr_value, str) and 'og:' in attr_value:
-                app.logger.info(attr_value)
+                # app.logger.info(attr_value)
                 if('title' in attr_value):
-                    app.logger.info(meta_tag.get('content'))
+                    # app.logger.info(meta_tag.get('content'))
                     data['title'] = meta_tag.get('content')
                 elif('image' in attr_value):
                     data['images'].append(meta_tag.get('content'))
@@ -159,14 +159,25 @@ def extractDataFromCSEResponse(response, data):
     images = []
 
     for item in response.get('items'):
-        if(item.get('link')):
-            images.append(item.get('link'))
+        link = item.get('link')
+        if link and '.jpg' in link.lower():
+            images.append(link)
 
     data['images'].extend(images)
+    pattern = r'\.(jpg|png|jpeg|jfif|pjpeg|pjp|svg|gif|webp)'
+    modified_images = []
+    
+    for image_url in data['images']:
+        if re.search(pattern, image_url, re.IGNORECASE):
+            modified_images.append(image_url)
+    
+    data['images'] = modified_images
+
+  
+    # app.logger.debug(f"images: {data['images']}")
 
     return
 
-
 # Run the Flask application
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, threaded=True, port=5000)
+    app.run(host='0.0.0.0', debug=True, threaded=True, port=5500)
